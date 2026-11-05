@@ -11,13 +11,7 @@
     ],
   },
   "files": [
-    {
-      "kind": "group",
-      "path": "Core",
-      "children": [
-        { "kind": "group", "path": "Models" },
-      ],
-    },
+    { "path": ".gitignore", "target-membership": [ "CleanMyMac/resources" ] },
     { "kind": "folder", "path": "CleanMyMac", "target-membership": [ "CleanMyMac" ] },
     {
       "kind": "group",

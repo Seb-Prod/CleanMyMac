@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode - données personnelles
+xcuserdata/
+*.xcuserstate
+
+# Fichiers de compilation
+DerivedData/
+build/
+
+# Fichiers temporaires Xcode
+*.hmap
+*.ipa
+*.dSYM
+*.dSYM.zip
+*.moved-aside

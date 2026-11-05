@@ -1,3 +1,17 @@
+//
+//  SystemSnapshot.swift
+//  MacCleaner Pro
+//
+//  Description :
+//  Modèle contenant un instantané des principales ressources
+//  du Mac : stockage total, espace utilisé, espace disponible
+//  et mémoire vive installée.
+//
+//  Fournit également les propriétés nécessaires pour afficher
+//  ces informations dans un format lisible par l'utilisateur.
+//
+//  Ce fichier ne collecte pas lui-même les informations système.
+//
 
 import Foundation
 
@@ -42,37 +56,3 @@ struct SystemSnapshot {
         )
     }
 }
-
-struct SystemInfoService {
-
-    func getSnapshot() -> SystemSnapshot {
-
-        let diskURL = URL(fileURLWithPath: "/")
-
-        let values = try? diskURL.resourceValues(
-            forKeys: [
-                .volumeTotalCapacityKey,
-                .volumeAvailableCapacityKey
-            ]
-        )
-
-        let total = Int64(
-            values?.volumeTotalCapacity ?? 0
-        )
-
-        let available = Int64(
-            values?.volumeAvailableCapacity ?? 0
-        )
-
-        let used = max(0, total - available)
-
-        return SystemSnapshot(
-            totalStorage: total,
-            availableStorage: available,
-            usedStorage: used,
-            totalMemory: ProcessInfo.processInfo.physicalMemory
-        )
-    }
-}
-
-

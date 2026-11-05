@@ -1,3 +1,19 @@
+//
+//  JunkScannerService.swift
+//  MacCleaner Pro
+//
+//  Description :
+//  Service chargé d'analyser les dossiers sélectionnés
+//  afin de détecter les fichiers potentiellement nettoyables.
+//
+//  Identifie notamment les fichiers présents dans les dossiers
+//  Cache et les fichiers temporaires.
+//
+//  Fournit également une fonction permettant de déplacer
+//  les fichiers sélectionnés vers la Corbeille macOS.
+//
+//  Ce service ne supprime jamais directement les fichiers.
+//
 
 import Foundation
 
