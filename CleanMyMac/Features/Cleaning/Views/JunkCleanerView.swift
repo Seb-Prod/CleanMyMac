@@ -1,4 +1,3 @@
-
 import SwiftUI
 import UniformTypeIdentifiers
 
@@ -44,184 +43,72 @@ struct JunkCleanerView: View {
 
         VStack(alignment: .leading, spacing: 22) {
 
-            VStack(alignment: .leading, spacing: 6) {
+            /// Présentation de titre et la description de la fonctionnalité de nettoyage.
+            CleaningHeaderView()
 
-                Text("Nettoyage intelligent")
-                    .font(.largeTitle.bold())
-
-                Text(
-                    "Identifiez les fichiers temporaires " +
-                    "et les fichiers de cache."
-                )
-                .foregroundStyle(.secondary)
+            /// Affichage du dossier sélectionné et permet d'en choisir un autre
+            FolderSelectionView(
+                folderName: folder?.lastPathComponent
+            ) {
+                showFolderPicker = true
             }
 
-            HStack {
-
-                Label(
-                    folder?.lastPathComponent ??
-                    "Aucun dossier sélectionné",
-                    systemImage: "folder"
-                )
-                .lineLimit(1)
-
-                Spacer()
-
-                Button("Choisir un dossier") {
-                    showFolderPicker = true
-                }
-                .buttonStyle(.bordered)
-            }
-
-            Button {
-
+            /// Bouton permettant de lancer l'analyse des fichiers
+            CleaningScanButton(
+                isScanning: isScanning,
+                isDisabled: folder == nil || isScanning
+            ) {
                 startScan()
-
-            } label: {
-
-                Label(
-                    isScanning ? "Analyse en cours..." : "Lancer l'analyse",
-                    systemImage: "sparkles"
-                )
-                .frame(maxWidth: .infinity)
             }
-            .buttonStyle(.borderedProminent)
-            .disabled(folder == nil || isScanning)
 
             if isScanning {
                 ProgressView()
             }
 
             if !items.isEmpty {
+                /// Résumé de l'espace potentiellement récupérable
+                CleaningSummaryView(totalSize: totalSize)
 
-                HStack {
-
-                    VStack(alignment: .leading, spacing: 4) {
-
-                        Text("Espace potentiellement récupérable")
-                            .font(.headline)
-
-                        Text(
-                            ByteCountFormatter.string(
-                                fromByteCount: totalSize,
-                                countStyle: .file
-                            )
-                        )
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(.blue)
+                /// Affichage du nombre de fichiers sélectionnés et des actions de sélection
+                CleaningSelectionBar(
+                    selectedCount: selectedIDs.count,
+                    onSelectAll: {
+                        selectedIDs = Set(items.map(\.id))
+                    },
+                    onDeselectAll: {
+                        selectedIDs.removeAll()
                     }
-
-                    Spacer()
-
-                    Image(systemName: "externaldrive.badge.checkmark")
-                        .font(.system(size: 35))
-                        .foregroundStyle(.blue)
-                }
-                .padding(20)
-                .background(
-                    .regularMaterial,
-                    in: RoundedRectangle(cornerRadius: 16)
                 )
             }
 
-            if !items.isEmpty {
-
-                HStack {
-
-                    Text("\(selectedIDs.count) sélectionné(s)")
-
-                    Spacer()
-
-                    Button("Tout sélectionner") {
-                        selectedIDs = Set(items.map(\.id))
-                    }
-                    .buttonStyle(.borderless)
-
-                    Button("Tout désélectionner") {
-                        selectedIDs.removeAll()
-                    }
-                    .buttonStyle(.borderless)
-                }
-                .font(.caption)
-            }
-
+            /// Liste des fichiers détectés comme nettoyable
             List {
-
                 ForEach(items) { item in
-
-                    HStack(spacing: 12) {
-
-                        Button {
-
-                            toggle(item)
-
-                        } label: {
-
-                            Image(
-                                systemName: selectedIDs.contains(item.id)
-                                ? "checkmark.circle.fill"
-                                : "circle"
-                            )
-                            .foregroundStyle(
-                                selectedIDs.contains(item.id)
-                                ? .blue
-                                : .secondary
-                            )
-                        }
-                        .buttonStyle(.plain)
-
-                        Image(systemName: "doc")
-                            .foregroundStyle(.secondary)
-
-                        VStack(alignment: .leading, spacing: 4) {
-
-                            Text(item.name)
-                                .lineLimit(1)
-
-                            Text(item.reason)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-
-                        Spacer()
-
-                        Text(item.formattedSize)
-                            .font(.caption.monospacedDigit())
+                    CleanableItemRow(
+                        item: item,
+                        isSelected: selectedIDs.contains(item.id)
+                    ) {
+                        toggle(item)
                     }
                 }
+
             }
             .listStyle(.inset)
 
             if !items.isEmpty {
-
-                Button {
-
+                /// Bouton permettant de lancer le nettoyage des fichiers sélectionnés
+                CleaningActionButton(
+                    isDisabled: selectedIDs.isEmpty || isScanning
+                ) {
                     showConfirmation = true
-
-                } label: {
-
-                    Label(
-                        "Mettre la sélection à la Corbeille",
-                        systemImage: "trash"
-                    )
-                    .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(.blue)
-                .disabled(selectedIDs.isEmpty || isScanning)
             }
 
-            if !statusMessage.isEmpty {
-                Text(statusMessage)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
+            /// Affichage des messages d'information et des éventuelles erreurs du nettoyage
+            CleaningFeedbackView(
+                statusMessage: statusMessage,
+                errorMessage: errorMessage
+            )
         }
         .padding(28)
         .fileImporter(
@@ -270,18 +157,17 @@ struct JunkCleanerView: View {
                 cleanSelectedItems()
             }
 
-            Button("Annuler", role: .cancel) { }
+            Button("Annuler", role: .cancel) {}
 
         } message: {
 
             Text(
-                "Les fichiers sélectionnés seront déplacés " +
-                "vers la Corbeille macOS. " +
-                "Taille sélectionnée : " +
-                ByteCountFormatter.string(
-                    fromByteCount: selectedSize,
-                    countStyle: .file
-                )
+                "Les fichiers sélectionnés seront déplacés "
+                    + "vers la Corbeille macOS. " + "Taille sélectionnée : "
+                    + ByteCountFormatter.string(
+                        fromByteCount: selectedSize,
+                        countStyle: .file
+                    )
             )
         }
         .onDisappear {
@@ -321,7 +207,8 @@ struct JunkCleanerView: View {
                     items = results
                     isScanning = false
 
-                    statusMessage = results.isEmpty
+                    statusMessage =
+                        results.isEmpty
                         ? "Aucun fichier correspondant trouvé."
                         : "\(results.count) fichier(s) détecté(s)."
                 }
