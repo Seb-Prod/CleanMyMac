@@ -43,10 +43,10 @@ struct JunkCleanerView: View {
 
         VStack(alignment: .leading, spacing: 22) {
 
-            /// Présentation de titre et la description de la fonctionnalité de nettoyage.
+            /// Présente le titre et la description de la fonctionnalité de nettoyage
             CleaningHeaderView()
 
-            /// Affichage du dossier sélectionné et permet d'en choisir un autre
+            /// Affiche le dossier sélectionné et permet d'en choisir un autre
             FolderSelectionView(
                 folderName: folder?.lastPathComponent
             ) {
