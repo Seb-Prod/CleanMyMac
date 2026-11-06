@@ -20,3 +20,10 @@ struct PlaceholderView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
+
+#Preview {
+    PlaceholderView(
+        title: "Paramètres",
+        icon: "gearshape"
+    )
+}

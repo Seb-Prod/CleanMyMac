@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @State private var selection: AppSection? = .dashboard
+    @State private var selection: AppSection? = .largeFiles
 
     @State private var snapshot: SystemSnapshot?
 
@@ -17,7 +17,7 @@ struct ContentView: View {
 
             Group {
 
-                switch selection ?? .dashboard {
+                switch selection ?? .largeFiles {
 
                 case .dashboard:
                     DashboardView(
@@ -31,10 +31,7 @@ struct ContentView: View {
                     JunkCleanerView()
 
                 case .largeFiles:
-                    PlaceholderView(
-                        title: "Gros fichiers",
-                        icon: "doc.text.magnifyingglass"
-                    )
+                    LargeFilesView()
 
                 case .applications:
                     PlaceholderView(
