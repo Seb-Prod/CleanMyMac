@@ -5,6 +5,7 @@ import SwiftUI
         WindowGroup {
             ContentView()
                 .containerBackground(.ultraThinMaterial, for: .window)
+                .frame(minWidth: 1000, minHeight: 700)
         }
     }
 }

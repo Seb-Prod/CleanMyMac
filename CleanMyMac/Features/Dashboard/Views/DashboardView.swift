@@ -40,7 +40,6 @@ struct DashboardView: View {
         .padding(30)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .appBackground()
-        .navigationTitle("Dashboard")
     }
 }
 
