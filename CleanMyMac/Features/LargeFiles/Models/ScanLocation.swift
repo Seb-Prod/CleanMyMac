@@ -8,7 +8,7 @@ import Foundation
 /// - Conserver son URL pour permettre au service d'analyse de le parcourir.
 ///
 /// Ce modèle ne réalise aucune analyse et ne gère aucune autorisation.
-struct ScanLocation: Identifiable, Sendable {
+struct ScanLocation: Identifiable, Sendable, Codable {
 
     /// Identifiant unique de l'emplacement.
     let id: String
@@ -21,6 +21,58 @@ struct ScanLocation: Identifiable, Sendable {
 
     /// URL du dossier à analyser.
     let url: URL
+
+    /// Autorisation macOS permettant de retrouver l'accès au dossier.
+    var bookmarkData: Data? = nil
+
+    /// Crée un emplacement à partir d'un dossier autorisé par macOS.
+    static func fromSelectedFolder(
+        url: URL,
+        title: String,
+        icon: String
+    ) throws -> ScanLocation {
+        let bookmarkData = try url.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
+
+        return ScanLocation(
+            id: url.path,
+            title: title,
+            icon: icon,
+            url: url,
+            bookmarkData: bookmarkData
+        )
+    }
+    
+    /// Récupère l'URL autorisée à partir du bookmark enregistré.
+    func resolveBookmark() throws -> ScanLocation {
+        guard let bookmarkData else {
+            throw NSError(
+                domain: "ScanLocation",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey: "Aucun bookmark disponible."
+                ]
+            )
+        }
+
+        var isStale = false
+
+        let resolvedURL = try URL(
+            resolvingBookmarkData: bookmarkData,
+            options: [.withSecurityScope],
+            relativeTo: nil,
+            bookmarkDataIsStale: &isStale
+        )
+
+        return try ScanLocation.fromSelectedFolder(
+            url: resolvedURL,
+            title: title,
+            icon: icon
+        )
+    }
 
     /// Retourne les principaux dossiers personnels de l'utilisateur.
     static var personalLocations: [ScanLocation] {

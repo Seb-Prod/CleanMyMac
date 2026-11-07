@@ -6,19 +6,31 @@ import SwiftUI
 /// cohérente avec les autres pages de l'application.
 struct LargeFilesHeaderView: View {
 
+    let onScan: () -> Void
+    let isScanning: Bool
+    let onSelectFolders: () -> Void
+
     var body: some View {
         PageHeader(
             title: "Gros fichiers",
-            subtitle: "Identifiez les fichiers volumineux qui occupent inutilement de l'espace sur votre Mac."
+            subtitle:
+                "Identifiez les fichiers volumineux qui occupent inutilement de l'espace sur votre Mac."
         ) {
-            // Aucun bouton ni action supplémentaire sur cette page.
-            EmptyView()
+            HStack(spacing: 12) {
+                Button(action: onSelectFolders) {
+                    Label(
+                        "Choisir les dossiers",
+                        systemImage: "folder.badge.plus"
+                    )
+                }
+
+                PrimaryButton(
+                    title: isScanning ? "Analyse en cours..." : "Analyser",
+                    icon: "magnifyingglass",
+                    action: onScan
+                )
+                .disabled(isScanning)
+            }
         }
     }
-}
-
-// MARK: - Aperçu
-#Preview {
-    LargeFilesHeaderView()
-        .padding()
 }

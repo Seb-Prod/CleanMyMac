@@ -17,7 +17,7 @@ struct StorageUsageCard: View {
     let storageUsage: Double
 
     var body: some View {
-        GlassCard {
+        GlassCard(tint: .white) {
             HStack(spacing: 16) {
                 Image("SSDIcon")
                     .resizable()

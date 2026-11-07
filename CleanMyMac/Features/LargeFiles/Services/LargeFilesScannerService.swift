@@ -11,6 +11,8 @@ import Foundation
 /// Ce service ne réalise aucune suppression et ne déplace aucun fichier.
 /// La gestion des résultats et des actions utilisateur reste dans LargeFilesView.
 struct LargeFilesScannerService: Sendable {
+    
+    nonisolated init() {}
 
     /// Analyse un dossier à la recherche de fichiers volumineux.
     ///
@@ -47,12 +49,24 @@ struct LargeFilesScannerService: Sendable {
                 at: folder,
                 includingPropertiesForKeys: keys,
                 options: [.skipsPackageDescendants],
-                errorHandler: { _, _ in true }
+                errorHandler: { _, error in
+                    // Signale l'erreur et interrompt le parcours du dossier concerné.
+                    print(
+                        "Erreur d'accès à \(folder.path) : \(error.localizedDescription)"
+                    )
+                    return false
+                }
             )
         else {
-            // Aucun énumérateur n'a pu être créé.
-            // On retourne donc une liste vide.
-            return []
+            // Impossible de créer l'énumérateur pour ce dossier.
+            throw NSError(
+                domain: "LargeFilesScannerService",
+                code: 1,
+                userInfo: [
+                    NSLocalizedDescriptionKey:
+                        "Impossible d'accéder au dossier \(folder.lastPathComponent)."
+                ]
+            )
         }
 
         // Tableau temporaire contenant les fichiers détectés.
@@ -98,6 +112,39 @@ struct LargeFilesScannerService: Sendable {
 
         // Classement des fichiers du plus volumineux au moins volumineux.
         return results.sorted {
+            $0.size > $1.size
+        }
+    }
+    
+    /// Analyse plusieurs emplacements et regroupe les fichiers détectés.
+    ///
+    /// - Parameters:
+    ///   - locations : Liste des emplacements à analyser.
+    ///   - minimumSize : Taille minimale des fichiers, en octets.
+    ///
+    /// - Returns : Tous les fichiers détectés, triés par taille décroissante.
+    ///
+    /// - Throws : Une erreur si l'analyse d'un emplacement échoue.
+    nonisolated func scan(
+        locations: [ScanLocation],
+        minimumSize: Int64
+    ) throws -> [LargeFileItem] {
+
+        // Tableau regroupant les résultats de tous les emplacements.
+        var allResults: [LargeFileItem] = []
+
+        // Analyse successive de chaque emplacement sélectionné.
+        for location in locations {
+            let locationResults = try scan(
+                folder: location.url,
+                minimumSize: minimumSize
+            )
+
+            allResults.append(contentsOf: locationResults)
+        }
+
+        // Classement global du plus gros fichier au plus petit.
+        return allResults.sorted {
             $0.size > $1.size
         }
     }
