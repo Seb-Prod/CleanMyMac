@@ -6,18 +6,7 @@ struct SidebarHeaderView: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(.white)
-                .frame(width: 56, height: 56)
-                .background(
-                    LinearGradient(
-                        colors: [.blue, .cyan],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    in: RoundedRectangle(cornerRadius: 16)
-                )
+            AppIconView(size: 128)
 
             Text("MacCleaner Pro")
                 .font(.title3.bold())

@@ -8,21 +8,24 @@ struct MyApp: App {
         WindowGroup {
             ContentView()
                 .environment(folderAccess)
-                .frame(minWidth: 1000, minHeight: 700).confirmationDialog(
-                    "Autoriser l'accès aux dossiers personnels ?",
-                    isPresented: $folderAccess.isAccessDialogPresented,
-                    titleVisibility: .visible
-                ) {
-                    Button("Autoriser") {
-                        folderAccess.requestAccess()
-                    }
-
-                    Button("Plus tard", role: .cancel) {}
-                } message: {
-                    Text(
-                        "MacCleaner Pro analysera vos dossiers personnels afin d'identifier les fichiers volumineux et de vous aider à libérer de l'espace."
+                .frame(minWidth: 1000, minHeight: 700)
+                .sheet(isPresented: $folderAccess.isAccessDialogPresented) {
+                    FolderAccessDialogView(
+                        onAuthorize: {
+                            folderAccess.requestAccess()
+                            folderAccess.isAccessDialogPresented = false
+                        },
+                        onCancel: {
+                            folderAccess.isAccessDialogPresented = false
+                        }
                     )
                 }
         }
+        // Taille à l'ouverture (le frame ci-dessus reste le minimum)
+        .defaultSize(width: 1100, height: 750)
+        // La fenêtre ne peut pas descendre sous la taille minimale du contenu
+        .windowResizability(.contentMinSize)
+        // Barre de titre fondue avec la toolbar, sans titre répété
+        .windowToolbarStyle(.unified(showsTitle: false))
     }
 }
