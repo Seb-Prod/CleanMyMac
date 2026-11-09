@@ -1,4 +1,3 @@
-import AppKit
 import SwiftUI
 
 /// Vue principale du module Gros fichiers.
@@ -33,12 +32,6 @@ struct LargeFilesView: View {
     /// Liste des fichiers volumineux détectés.
     @State private var results: [LargeFileItem] = []
 
-    /// Répertoires sélectionnés et autorisés par l'utilisateur.
-    @State private var selectedLocations: [ScanLocation] = []
-
-    /// Clé utilisée pour conserver les dossiers autorisés.
-    private let locationsStorageKey = "authorizedScanLocations"
-
     /// Retourne les fichiers trouvés dans un emplacement donné.
     private func files(for location: ScanLocation) -> [LargeFileItem] {
         let threshold = Int64(minimumSize * 1_000_000)
@@ -46,76 +39,6 @@ struct LargeFilesView: View {
         return results.filter { file in
             file.url.path.hasPrefix(location.url.path + "/")
                 && file.size >= threshold
-        }
-    }
-
-    /// Enregistre les emplacements autorisés.
-    private func saveLocations() {
-        do {
-            let data = try JSONEncoder().encode(selectedLocations)
-            UserDefaults.standard.set(data, forKey: locationsStorageKey)
-        } catch {
-            print("Erreur de sauvegarde : \(error.localizedDescription)")
-        }
-    }
-
-    /// Restaure les emplacements autorisés précédemment enregistrés.
-    private func loadLocations() {
-        guard
-            let data = UserDefaults.standard.data(
-                forKey: locationsStorageKey
-            )
-        else { return }
-
-        do {
-            let savedLocations = try JSONDecoder().decode(
-                [ScanLocation].self,
-                from: data
-            )
-
-            selectedLocations = try savedLocations.map {
-                try $0.resolveBookmark()
-            }
-
-            saveLocations()
-
-        } catch {
-            print("Erreur de restauration : \(error.localizedDescription)")
-        }
-    }
-
-    /// Ouvre le sélecteur natif de dossiers macOS.
-    private func selectFolders() {
-        let panel = NSOpenPanel()
-        panel.title = "Autoriser l'accès à votre dossier personnel"
-        panel.message =
-            "MacCleaner Pro analysera automatiquement les dossiers personnels que vous autorisez."
-        panel.prompt = "Autoriser l'accès"
-        panel.canChooseFiles = false
-        panel.canChooseDirectories = true
-        panel.allowsMultipleSelection = false
-        panel.canCreateDirectories = false
-        panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser
-
-        guard panel.runModal() == .OK else { return }
-
-        do {
-            let newLocations = try panel.urls.map { url in
-                try ScanLocation.fromSelectedFolder(
-                    url: url,
-                    title: url.lastPathComponent,
-                    icon: "folder"
-                )
-            }
-
-            selectedLocations = newLocations
-
-            saveLocations()
-
-        } catch {
-            print(
-                "Impossible de créer les autorisations : \(error.localizedDescription)"
-            )
         }
     }
 
@@ -155,16 +78,6 @@ struct LargeFilesView: View {
             for location in locations {
                 scanStatuses[location.id] = .scanning
 
-                guard location.url.startAccessingSecurityScopedResource() else {
-                    scanStatuses[location.id] = .failed
-                    print("Impossible d'accéder à \(location.title)")
-                    continue
-                }
-
-                defer {
-                    location.url.stopAccessingSecurityScopedResource()
-                }
-
                 let threshold: Int64 = 10_000_000
 
                 do {
@@ -199,8 +112,7 @@ struct LargeFilesView: View {
                 onScan: {
                     startScan()
                 },
-                isScanning: isScanning,
-                onSelectFolders: { selectFolders() }
+                isScanning: isScanning
             )
 
             // Sélection de l'emplacement à analyser.
@@ -240,9 +152,6 @@ struct LargeFilesView: View {
             maxHeight: .infinity,
             alignment: .topLeading
         )
-        .onAppear {
-            loadLocations()
-        }
         .onChange(of: folderAccess.isAuthorized) { _, isAuthorized in
             guard isAuthorized, isScanWaitingForAuthorization else { return }
 

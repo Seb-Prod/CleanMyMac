@@ -8,7 +8,6 @@ struct LargeFilesHeaderView: View {
 
     let onScan: () -> Void
     let isScanning: Bool
-    let onSelectFolders: () -> Void
 
     var body: some View {
         PageHeader(
@@ -17,13 +16,6 @@ struct LargeFilesHeaderView: View {
                 "Identifiez les fichiers volumineux qui occupent inutilement de l'espace sur votre Mac."
         ) {
             HStack(spacing: 12) {
-                Button(action: onSelectFolders) {
-                    Label(
-                        "Choisir les dossiers",
-                        systemImage: "folder.badge.plus"
-                    )
-                }
-
                 PrimaryButton(
                     title: isScanning ? "Analyse en cours..." : "Analyser",
                     icon: "magnifyingglass",
