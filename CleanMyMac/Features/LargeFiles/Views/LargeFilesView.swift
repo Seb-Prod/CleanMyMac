@@ -32,6 +32,15 @@ struct LargeFilesView: View {
     /// Liste des fichiers volumineux détectés.
     @State private var results: [LargeFileItem] = []
 
+    /// Emplacement dont la liste des fichiers doit être affichée.
+    @State private var selectedLocation: ScanLocation?
+
+    /// Identifiants des fichiers sélectionnés.
+    @State private var selectedFileIDs: Set<String> = []
+
+    /// Contrôle l'affichage de la confirmation de suppression.
+    @State private var isDeleteConfirmationPresented = false
+
     /// Retourne les fichiers trouvés dans un emplacement donné.
     private func files(for location: ScanLocation) -> [LargeFileItem] {
         let threshold = Int64(minimumSize * 1_000_000)
@@ -103,6 +112,40 @@ struct LargeFilesView: View {
         }
     }
 
+    /// Ouvre le Finder en sélectionnant le fichier.
+    private func revealInFinder(_ file: LargeFileItem) {
+        NSWorkspace.shared.activateFileViewerSelecting([file.url])
+    }
+
+    /// Déplace les fichiers sélectionnés vers la Corbeille.
+    private func moveSelectedFilesToTrash() {
+        let selectedFiles = results.filter {
+            selectedFileIDs.contains($0.id)
+        }
+
+        var successfullyTrashedIDs: Set<String> = []
+
+        for file in selectedFiles {
+            do {
+                try FileManager.default.trashItem(
+                    at: file.url,
+                    resultingItemURL: nil
+                )
+                successfullyTrashedIDs.insert(file.id)
+            } catch {
+                print(
+                    "Erreur lors du déplacement de \(file.name) : \(error.localizedDescription)"
+                )
+            }
+        }
+
+        results.removeAll {
+            successfullyTrashedIDs.contains($0.id)
+        }
+
+        selectedFileIDs.subtract(successfullyTrashedIDs)
+    }
+
     // MARK: - Interface
 
     var body: some View {
@@ -119,7 +162,7 @@ struct LargeFilesView: View {
             ScrollView {
                 ScanLocationSelectionView(
                     onOpenLocation: { location in
-                        print("Emplacement sélectionné : \(location.title)")
+                        selectedLocation = location
                     },
                     statisticsForLocation: { location in
                         let locationFiles = files(for: location)
@@ -151,14 +194,34 @@ struct LargeFilesView: View {
             maxWidth: .infinity,
             maxHeight: .infinity,
             alignment: .topLeading
-        )
-        .onChange(of: folderAccess.isAuthorized) { _, isAuthorized in
+        ).onChange(of: folderAccess.isAuthorized) { _, isAuthorized in
             guard isAuthorized, isScanWaitingForAuthorization else { return }
 
             isScanWaitingForAuthorization = false
             startScan()
-        }
+        }.confirmationDialog(
+            "Mettre les fichiers sélectionnés à la Corbeille ?",
+            isPresented: $isDeleteConfirmationPresented,
+            titleVisibility: .visible
+        ) {
+            Button("Mettre à la Corbeille", role: .destructive) {
+                moveSelectedFilesToTrash()
+            }
 
+            Button("Annuler", role: .cancel) {}
+        } message: {
+            Text("Les fichiers sélectionnés seront déplacés vers la Corbeille.")
+        }.sheet(item: $selectedLocation) { location in
+            LargeFilesListView(
+                location: location,
+                files: files(for: location),
+                selectedFileIDs: $selectedFileIDs,
+                onRequestDelete: {
+                    moveSelectedFilesToTrash()
+                        selectedLocation = nil
+                }
+            )
+        }
     }
 
 }
