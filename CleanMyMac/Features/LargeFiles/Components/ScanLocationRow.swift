@@ -31,17 +31,18 @@ struct ScanLocationRow: View {
 
             // Statistiques des fichiers trouvés.
             VStack(alignment: .trailing, spacing: 4) {
-                Text("\(fileCount) fichiers")
-                    .font(.subheadline)
+                InfoLabel(
+                    title: "\(fileCount) fichiers",
+                    icon: "doc"
+                )
 
-                Text(
-                    ByteCountFormatter.string(
+                InfoLabel(
+                    title: ByteCountFormatter.string(
                         fromByteCount: totalSize,
                         countStyle: .file
-                    )
+                    ),
+                    icon: "externaldrive"
                 )
-                .font(.caption)
-                .foregroundStyle(.secondary)
             }
 
             Group {

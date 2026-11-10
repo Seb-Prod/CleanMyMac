@@ -26,7 +26,7 @@ struct PageHeader<Actions: View>: View {
             // Titre et description de la page.
             VStack(alignment: .leading, spacing: 8) {
                 Text(title)
-                    .font(.largeTitle.bold())
+                    .font(.title2.weight(.semibold))
 
                 Text(subtitle)
                     .font(.subheadline)

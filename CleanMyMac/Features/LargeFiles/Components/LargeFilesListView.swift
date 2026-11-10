@@ -21,8 +21,9 @@ struct LargeFilesListView: View {
                 .font(.title2)
                 .fontWeight(.semibold)
 
-            Text("\(files.count) fichiers volumineux détectés")
-                .foregroundStyle(.secondary)
+            SectionTitle(
+                subtitle: "\(files.count) fichiers volumineux détectés"
+            )
 
             Divider()
 
@@ -76,15 +77,17 @@ struct LargeFilesListView: View {
                             Text(file.formattedSize)
                                 .fontWeight(.medium)
 
-                            Text("Créé le \(file.formattedCreationDate)")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-
-                            Text(
-                                "Dernier accès : \(file.formattedLastAccessDate)"
+                            InfoLabel(
+                                title: "Créé le",
+                                value: file.formattedCreationDate,
+                                icon: "calendar"
                             )
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+
+                            InfoLabel(
+                                title: "Dernier accès",
+                                value: file.formattedLastAccessDate,
+                                icon: "clock"
+                            )
                         }
 
                         Button {
@@ -103,39 +106,38 @@ struct LargeFilesListView: View {
             }
 
             HStack {
-                Button("Anuller") {
+                CancelButton(title: "Annuler") {
                     dismiss()
                 }
-                .keyboardShortcut(.cancelAction)
 
                 Spacer()
 
-                Button(role: .destructive) {
+                DestructiveButton(
+                    title: "Mettre à la Corbeille (\(selectedFileIDs.count))",
+                    icon: "trash",
+                    isDisabled: selectedFileIDs.isEmpty
+                ) {
                     isDeleteConfirmationPresented = true
-                } label: {
-                    Label(
-                        "Mettre à la Corbeille (\(selectedFileIDs.count))",
-                        systemImage: "trash"
-                    )
                 }
-                .disabled(selectedFileIDs.isEmpty)
-                .tint(.red)
             }
         }
         .padding(24)
         .frame(minWidth: 800, minHeight: 550)
-        .confirmationDialog(
-            "Mettre les fichiers sélectionnés à la Corbeille ?",
-            isPresented: $isDeleteConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Mettre à la Corbeille", role: .destructive) {
-                onRequestDelete()
+        .overlay {
+            if isDeleteConfirmationPresented {
+                AppConfirmationDialogView(
+                    title: "Confirmer la suppression",
+                    message: "Les fichiers sélectionnés seront déplacés vers la Corbeille.",
+                    confirmTitle: "Mettre à la Corbeille",
+                    onConfirm: {
+                        isDeleteConfirmationPresented = false
+                        onRequestDelete()
+                    },
+                    onCancel: {
+                        isDeleteConfirmationPresented = false
+                    }
+                )
             }
-
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Les fichiers sélectionnés seront déplacés vers la Corbeille.")
         }
     }
 }
