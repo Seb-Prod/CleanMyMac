@@ -78,7 +78,7 @@ struct LargeFileItem: Identifiable, Sendable {
         )
     }
 
-    init(url: URL, size: Int64) {
+    nonisolated init(url: URL, size: Int64) {
         self.url = url
         self.size = size
 

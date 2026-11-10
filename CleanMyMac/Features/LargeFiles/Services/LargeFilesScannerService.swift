@@ -11,7 +11,7 @@ import Foundation
 /// Ce service ne réalise aucune suppression et ne déplace aucun fichier.
 /// La gestion des résultats et des actions utilisateur reste dans LargeFilesView.
 struct LargeFilesScannerService: Sendable {
-    
+
     nonisolated init() {}
 
     /// Analyse un dossier à la recherche de fichiers volumineux.
@@ -115,37 +115,5 @@ struct LargeFilesScannerService: Sendable {
             $0.size > $1.size
         }
     }
-    
-    /// Analyse plusieurs emplacements et regroupe les fichiers détectés.
-    ///
-    /// - Parameters:
-    ///   - locations : Liste des emplacements à analyser.
-    ///   - minimumSize : Taille minimale des fichiers, en octets.
-    ///
-    /// - Returns : Tous les fichiers détectés, triés par taille décroissante.
-    ///
-    /// - Throws : Une erreur si l'analyse d'un emplacement échoue.
-    nonisolated func scan(
-        locations: [ScanLocation],
-        minimumSize: Int64
-    ) throws -> [LargeFileItem] {
 
-        // Tableau regroupant les résultats de tous les emplacements.
-        var allResults: [LargeFileItem] = []
-
-        // Analyse successive de chaque emplacement sélectionné.
-        for location in locations {
-            let locationResults = try scan(
-                folder: location.url,
-                minimumSize: minimumSize
-            )
-
-            allResults.append(contentsOf: locationResults)
-        }
-
-        // Classement global du plus gros fichier au plus petit.
-        return allResults.sorted {
-            $0.size > $1.size
-        }
-    }
 }
