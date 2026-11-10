@@ -19,7 +19,7 @@ struct DestructiveButton: View {
             }
             .font(.body.weight(.semibold))
         }
-        .buttonStyle(.bordered)
+        .buttonStyle(.borderedProminent)
         .controlSize(.large)
         .disabled(isDisabled)
         .tint(.red)

@@ -15,6 +15,9 @@ struct LargeFilesView: View {
 
     // MARK: - État de l'analyse
 
+    let snapshot: SystemSnapshot?
+    let onRefresh: () -> Void
+
     @Environment(FolderAccessService.self) private var folderAccess
 
     @State private var isScanWaitingForAuthorization = false
@@ -38,8 +41,11 @@ struct LargeFilesView: View {
     /// Identifiants des fichiers sélectionnés.
     @State private var selectedFileIDs: Set<String> = []
 
-    /// Contrôle l'affichage de la confirmation de suppression.
-    @State private var isDeleteConfirmationPresented = false
+    /// Taille des fichiers suivis dans la Corbeille.
+    @State private var managedTrashSize: Int64 = 0
+
+    /// Contrôle la confirmation du vidage de la Corbeille.
+    @State private var isEmptyTrashConfirmationPresented = false
 
     /// Retourne les fichiers trouvés dans un emplacement donné.
     private func files(for location: ScanLocation) -> [LargeFileItem] {
@@ -49,6 +55,16 @@ struct LargeFilesView: View {
             file.url.path.hasPrefix(location.url.path + "/")
                 && file.size >= threshold
         }
+    }
+
+    /// Taille totale des fichiers correspondant au filtre actuel.
+    private var recoverableSize: Int64 {
+        let threshold = Int64(minimumSize * 1_000_000)
+
+        return
+            results
+            .filter { $0.size >= threshold }
+            .reduce(Int64(0)) { $0 + $1.size }
     }
 
     /// Lance l'analyse de tous les répertoires personnels.
@@ -112,11 +128,6 @@ struct LargeFilesView: View {
         }
     }
 
-    /// Ouvre le Finder en sélectionnant le fichier.
-    private func revealInFinder(_ file: LargeFileItem) {
-        NSWorkspace.shared.activateFileViewerSelecting([file.url])
-    }
-
     /// Déplace les fichiers sélectionnés vers la Corbeille.
     private func moveSelectedFilesToTrash() {
         let selectedFiles = results.filter {
@@ -127,10 +138,7 @@ struct LargeFilesView: View {
 
         for file in selectedFiles {
             do {
-                try FileManager.default.trashItem(
-                    at: file.url,
-                    resultingItemURL: nil
-                )
+                try TrashService().moveToTrash(file.url)
                 successfullyTrashedIDs.insert(file.id)
             } catch {
                 print(
@@ -144,8 +152,21 @@ struct LargeFilesView: View {
         }
 
         selectedFileIDs.subtract(successfullyTrashedIDs)
+        managedTrashSize = TrashService().getManagedTrashSize()
+        onRefresh()
     }
 
+    /// Vide uniquement les fichiers suivis par MacCleaner Pro.
+    private func emptyManagedTrash() {
+        do {
+            try TrashService().emptyManagedTrash()
+        } catch {
+            print("Erreur lors du vidage de la Corbeille : \(error.localizedDescription)")
+        }
+
+        managedTrashSize = TrashService().getManagedTrashSize()
+        onRefresh()
+    }
     // MARK: - Interface
 
     var body: some View {
@@ -188,8 +209,20 @@ struct LargeFilesView: View {
 
             MinimumFileSizeFilterView(minimumSize: $minimumSize)
 
+            StorageSummaryView(
+                availableStorage: snapshot?.availableStorage ?? 0,
+                recoverableSize: recoverableSize,
+                managedTrashSize: managedTrashSize,
+                onEmptyTrash: {
+                    isEmptyTrashConfirmationPresented = true
+                }
+
+            )
         }
         .padding(30)
+        .task {
+            managedTrashSize = TrashService().getManagedTrashSize()
+        }
         .frame(
             maxWidth: .infinity,
             maxHeight: .infinity,
@@ -199,18 +232,6 @@ struct LargeFilesView: View {
 
             isScanWaitingForAuthorization = false
             startScan()
-        }.confirmationDialog(
-            "Mettre les fichiers sélectionnés à la Corbeille ?",
-            isPresented: $isDeleteConfirmationPresented,
-            titleVisibility: .visible
-        ) {
-            Button("Mettre à la Corbeille", role: .destructive) {
-                moveSelectedFilesToTrash()
-            }
-
-            Button("Annuler", role: .cancel) {}
-        } message: {
-            Text("Les fichiers sélectionnés seront déplacés vers la Corbeille.")
         }.sheet(item: $selectedLocation) { location in
             LargeFilesListView(
                 location: location,
@@ -218,14 +239,25 @@ struct LargeFilesView: View {
                 selectedFileIDs: $selectedFileIDs,
                 onRequestDelete: {
                     moveSelectedFilesToTrash()
-                        selectedLocation = nil
+                    selectedLocation = nil
                 }
             )
+        }.overlay {
+            if isEmptyTrashConfirmationPresented {
+                AppConfirmationDialogView(
+                    title: "Vider la Corbeille ?",
+                    message: "Les fichiers placés dans la Corbeille par MacCleaner Pro seront définitivement supprimés. Cette action est irréversible.",
+                    confirmTitle: "Vider définitivement",
+                    onConfirm: {
+                        isEmptyTrashConfirmationPresented = false
+                        emptyManagedTrash()
+                    },
+                    onCancel: {
+                        isEmptyTrashConfirmationPresented = false
+                    }
+                )
+            }
         }
     }
 
-}
-
-#Preview {
-    LargeFilesView()
 }

@@ -31,7 +31,12 @@ struct ContentView: View {
                     JunkCleanerView()
 
                 case .largeFiles:
-                    LargeFilesView()
+                    LargeFilesView(
+                        snapshot: snapshot,
+                        onRefresh: {
+                            refreshSystemInfo()
+                        }
+                    )
 
                 case .applications:
                     PlaceholderView(
