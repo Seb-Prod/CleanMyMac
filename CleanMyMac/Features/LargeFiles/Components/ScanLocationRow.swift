@@ -7,6 +7,8 @@ struct ScanLocationRow: View {
 
     /// Emplacement représenté par cette ligne.
     let location: ScanLocation
+    let index: Int
+    let totalCount: Int
 
     /// État actuel de l'analyse du répertoire.
     var status: LargeFilesScanStatus = .notScanned
@@ -74,12 +76,19 @@ struct ScanLocationRow: View {
         }
         .padding(12)
         .background {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(
-                    isHovered
-                        ? Color.primary.opacity(0.04)
-                        : Color.clear
-                )
+            UnevenRoundedRectangle(
+                topLeadingRadius: index == 0 ? 10 : 0,
+                bottomLeadingRadius: index == totalCount - 1 ? 10 : 0,
+                bottomTrailingRadius: index == totalCount - 1 ? 10 : 0,
+                topTrailingRadius: index == 0 ? 10 : 0
+            )
+            .fill(
+                isHovered
+                    ? Color.primary.opacity(0.09)
+                    : index.isMultiple(of: 2)
+                        ? Color.primary.opacity(0.035)
+                        : Color.primary.opacity(0.07)
+            )
         }
     }
 }

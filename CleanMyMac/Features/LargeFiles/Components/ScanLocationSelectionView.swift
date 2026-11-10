@@ -32,11 +32,13 @@ struct ScanLocationSelectionView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            ForEach(visibleLocations) { location in
+            ForEach(Array(visibleLocations.enumerated()), id: \.element.id) { index, location in
                 let statistics = statisticsForLocation(location)
 
                 ScanLocationRow(
                     location: location,
+                    index: index,
+                    totalCount: visibleLocations.count,
                     status: statusForLocation(location),
                     fileCount: statistics.fileCount,
                     totalSize: statistics.totalSize,
@@ -44,10 +46,6 @@ struct ScanLocationSelectionView: View {
                         onOpenLocation(location)
                     }
                 )
-
-                if location.id != visibleLocations.last?.id {
-                    Divider()
-                }
             }
         }
         .padding(8)
