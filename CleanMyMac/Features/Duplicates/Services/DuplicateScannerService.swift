@@ -11,16 +11,29 @@ import Foundation
 /// - Returns: Les groupes de fichiers ayant un contenu identique.
 /// - Throws: Une erreur si l'accès à l'un des répertoires échoue
 ///   ou si le calcul d'une empreinte échoue.
-struct DuplicateScannerService {
+struct DuplicateScannerService: Sendable {
+    private let excludedFolderNames: Set<String> = [
+        "node_modules",
+        ".git",
+        ".next",
+        ".turbo",
+        "DerivedData",
+        "Pods",
+        "Carthage",
+        "dist",
+        "__pycache__",
+        ".venv",
+        "venv",
+        ".cache",
+        ".pytest_cache",
+        ".mypy_cache",
+        ".gradle",
+        ".idea",
+    ]
 
-    /// Regroupe les fichiers selon leur taille.
-    ///
-    /// Les groupes contenant un seul fichier sont ignorés, car ils ne peuvent
-    /// pas contenir de doublons.
-    ///
-    /// - Parameter files: Les fichiers à regrouper.
-    /// - Returns: Les groupes contenant au moins deux fichiers de même taille.
-    func groupFilesBySize(_ files: [URL]) -> [[URL]] {
+    nonisolated init() {}
+
+    nonisolated func groupFilesBySize(_ files: [URL]) -> [[URL]] {
         var groups: [Int64: [URL]] = [:]
 
         for fileURL in files {
@@ -38,16 +51,7 @@ struct DuplicateScannerService {
         return groups.values.filter { $0.count > 1 }
     }
 
-    
-    /// Calcule l'empreinte cryptographique SHA-256 d'un fichier.
-    ///
-    /// Le fichier est lu progressivement par blocs de 1 Mo afin de limiter
-    /// la consommation de mémoire, même pour les fichiers volumineux.
-    ///
-    /// - Parameter fileURL: L'URL du fichier à analyser.
-    /// - Returns: L'empreinte SHA-256 sous forme de chaîne hexadécimale.
-    /// - Throws: Une erreur si le fichier ne peut pas être lu.
-    func calculateHash(for fileURL: URL) throws -> String {
+    nonisolated func calculateHash(for fileURL: URL) throws -> String {
         let fileHandle = try FileHandle(forReadingFrom: fileURL)
         defer {
             try? fileHandle.close()
@@ -56,7 +60,8 @@ struct DuplicateScannerService {
         var hasher = SHA256()
 
         while let chunk = try fileHandle.read(upToCount: 1_048_576),
-              !chunk.isEmpty {
+            !chunk.isEmpty
+        {
             hasher.update(data: chunk)
         }
 
@@ -65,41 +70,43 @@ struct DuplicateScannerService {
         return hash.map { String(format: "%02x", $0) }.joined()
     }
 
-
-    /// Identifie les fichiers ayant un contenu strictement identique.
-    ///
-    /// Les fichiers sont d'abord regroupés par taille, puis comparés
-    /// à l'aide de leurs empreintes SHA-256.
-    ///
-    /// - Parameter files: Les fichiers à comparer.
-    /// - Returns: Les groupes contenant des fichiers identiques.
-    /// - Throws: Une erreur si le calcul d'une empreinte échoue.
-    func findDuplicates(in files: [URL]) throws -> [[URL]] {
+    nonisolated func findDuplicates(
+        in files: [URL],
+        progress: @Sendable (Double) -> Void
+    ) throws -> [[URL]] {
         let sizeGroups = groupFilesBySize(files)
+        let totalFiles = sizeGroups.reduce(0) { $0 + $1.count }
 
         var hashGroups: [String: [URL]] = [:]
+        var processedFiles = 0
+
+        guard totalFiles > 0 else {
+            progress(1)
+            return []
+        }
 
         for group in sizeGroups {
             for fileURL in group {
-                let hash = try calculateHash(for: fileURL)
+                guard let hash = try? calculateHash(for: fileURL) else {
+                    processedFiles += 1
+                    progress(Double(processedFiles) / Double(totalFiles))
+                    continue
+                }
+
                 hashGroups[hash, default: []].append(fileURL)
+                processedFiles += 1
+                progress(Double(processedFiles) / Double(totalFiles))
             }
         }
 
         return hashGroups.values.filter { $0.count > 1 }
     }
 
-    /// Récupère les fichiers réguliers d'un répertoire et de ses sous-répertoires.
-    ///
-    /// Les dossiers et les liens symboliques sont ignorés.
-    ///
-    /// - Parameter folder: Le répertoire à parcourir.
-    /// - Returns: La liste des fichiers trouvés.
-    /// - Throws: Une erreur si le répertoire ne peut pas être parcouru.
-    private func collectFiles(in folder: URL) throws -> [URL] {
+    nonisolated private func collectFiles(in folder: URL) throws -> [URL] {
         let keys: [URLResourceKey] = [
             .isRegularFileKey,
             .isSymbolicLinkKey,
+            .isDirectoryKey,
         ]
 
         guard
@@ -124,6 +131,18 @@ struct DuplicateScannerService {
         for case let fileURL as URL in enumerator {
             let values = try? fileURL.resourceValues(forKeys: Set(keys))
 
+            if values?.isSymbolicLink == true {
+                enumerator.skipDescendants()
+                continue
+            }
+
+            if values?.isDirectory == true,
+                excludedFolderNames.contains(fileURL.lastPathComponent)
+            {
+                enumerator.skipDescendants()
+                continue
+            }
+
             guard values?.isRegularFile == true,
                 values?.isSymbolicLink != true
             else {
@@ -136,23 +155,27 @@ struct DuplicateScannerService {
         return files
     }
 
-    /// Analyse un dossier pour trouver des fichiers en double.
-    ///
-    /// Cette méthode parcourt le contenu du dossier spécifié, filtre les fichiers réguliers
-    /// (en ignorant les liens symboliques) et lance la recherche de doublons.
-    ///
-    /// - Parameter folder: L'URL du dossier à analyser.
-    /// - Returns: Un tableau d'URL représentant les fichiers en double trouvés.
-    /// - Throws: Une erreur `NSError` si l'accès au dossier est impossible.
-    func scan(folders: [URL]) throws -> [[URL]] {
+    nonisolated func scan(
+        folders: [URL],
+        progress: @Sendable (Double) -> Void
+    ) throws -> [[URL]] {
         var allFiles: [URL] = []
+        var collectedPaths = Set<String>()
 
         for folder in folders {
             let files = try collectFiles(in: folder)
-            allFiles.append(contentsOf: files)
+
+            for fileURL in files {
+                if collectedPaths.insert(fileURL.path).inserted {
+                    allFiles.append(fileURL)
+                }
+            }
         }
 
-        return try findDuplicates(in: allFiles)
+        return try findDuplicates(
+            in: allFiles,
+            progress: progress
+        )
     }
 
 }

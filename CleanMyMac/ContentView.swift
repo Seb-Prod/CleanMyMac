@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @State private var selection: AppSection? = .largeFiles
+    @State private var selection: AppSection? = .duplicates
 
     @State private var snapshot: SystemSnapshot?
 
@@ -45,10 +45,7 @@ struct ContentView: View {
                     )
 
                 case .duplicates:
-                    PlaceholderView(
-                        title: "Doublons",
-                        icon: "doc.on.doc"
-                    )
+                    DuplicatesView()
 
                 case .maintenance:
                     PlaceholderView(
