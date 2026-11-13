@@ -77,7 +77,6 @@ struct SystemInfoCard: View {
 
 #Preview {
     ZStack {
-        AppBackground()
 
         SystemInfoCard(
             availableStorage: "180",

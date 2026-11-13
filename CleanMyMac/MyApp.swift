@@ -1,7 +1,9 @@
+import AppKit
 import SwiftUI
 
 @main
 struct MyApp: App {
+    @Environment(\.openWindow) private var openWindow
     @State private var folderAccess = FolderAccessService()
 
     var body: some Scene {
@@ -26,6 +28,23 @@ struct MyApp: App {
         // La fenêtre ne peut pas descendre sous la taille minimale du contenu
         .windowResizability(.contentMinSize)
         // Barre de titre fondue avec la toolbar, sans titre répété
-        .windowToolbarStyle(.unified(showsTitle: false))
+        .windowToolbarStyle(.unified(showsTitle: true))
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("À propos de MacCleaner Pro") {
+                    openWindow(id: "about-window")
+                }
+            }
+        }
+
+        Settings {
+            SettingsView()
+        }
+
+        Window("À propos de MacCleaner Pro", id: "about-window") {
+            AboutView()
+        }.windowResizability(.contentSize)
+            .windowStyle(.hiddenTitleBar)
+
     }
 }

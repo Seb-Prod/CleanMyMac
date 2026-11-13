@@ -2,8 +2,9 @@ import SwiftUI
 
 struct ContentView: View {
 
-    @State private var selection: AppSection? = .duplicates
+    @Environment(\.openSettings) private var openSettings
 
+    @State private var selection: AppSection? = .dashboard
     @State private var snapshot: SystemSnapshot?
 
     private let systemService = SystemInfoService()
@@ -54,15 +55,18 @@ struct ContentView: View {
                     )
 
                 case .settings:
-                    PlaceholderView(
-                        title: "Paramètres",
-                        icon: "gearshape"
-                    )
+                    SettingsView()
                 }
             }
         }
         .task {
             refreshSystemInfo()
+        }
+        .onChange(of: selection) { _, newValue in
+            if newValue == .settings {
+                openSettings()
+                selection = .dashboard
+            }
         }
     }
 

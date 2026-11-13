@@ -51,7 +51,6 @@ struct GlassCard<Content: View>: View {
 
 #Preview {
     ZStack {
-        AppBackground()
 
         // Le conteneur harmonise le rendu des cartes en verre
         GlassEffectContainer(spacing: 16) {

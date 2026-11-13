@@ -1,5 +1,4 @@
 import SwiftUI
-import AppKit
 
 /// Une vue SwiftUI qui affiche l'icône principale de l'application.
 ///
@@ -17,12 +16,18 @@ struct AppIconView: View {
                 forResource: "AppIcon",
                 withExtension: "icns"
             ),
-            let appIcon = NSImage(contentsOf: appIconURL) {
+                let appIcon = NSImage(contentsOf: appIconURL)
+            {
                 Image(nsImage: appIcon)
                     .resizable()
                     .scaledToFit()
             }
         }
         .frame(width: size, height: size)
+        .shadow(
+            color: .black.opacity(0.15),
+            radius: 6,
+            y: 3
+        )
     }
 }
